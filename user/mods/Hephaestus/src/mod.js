@@ -142,7 +142,7 @@ class SampleTrader {
                 }
                 let price = (config || {}).cost || 712;
                 try {
-                    price = ragfairPriceService.getDynamicOfferPrice(preItems, currency);
+                    price = ragfairPriceService.getDynamicOfferPriceForOffer(preItems, currency);
                 }
                 catch (error) {
                 }
