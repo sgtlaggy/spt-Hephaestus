@@ -1,9 +1,9 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/indent */
-import { DependencyContainer } from "tsyringe";
-
+import { ProfileHelper } from "@spt/helpers/ProfileHelper";
 import { PreSptModLoader } from "@spt/loaders/PreSptModLoader";
 import { ITraderAssort, ITraderBase } from "@spt/models/eft/common/tables/ITrader";
+import { IWeaponBuild } from "@spt/models/eft/profile/ISptProfile";
 import { ConfigTypes } from "@spt/models/enums/ConfigTypes";
 import { Traders } from "@spt/models/enums/Traders";
 import { IPostDBLoadMod } from "@spt/models/external/IPostDBLoadMod";
@@ -17,7 +17,7 @@ import type { DynamicRouterModService } from "@spt/services/mod/dynamicRouter/Dy
 import type { StaticRouterModService } from "@spt/services/mod/staticRouter/StaticRouterModService";
 import { RagfairPriceService } from "@spt/services/RagfairPriceService";
 import { JsonUtil } from "@spt/utils/JsonUtil";
-import { IWeaponBuild } from "@spt/models/eft/profile/ISptProfile";
+import { DependencyContainer } from "tsyringe";
 
 import fs from "fs";
 
@@ -41,6 +41,7 @@ class Hephaestus implements IPreSptLoadMod, IPostDBLoadMod {
         const configServer = container.resolve<ConfigServer>("ConfigServer");
         const traderConfig: ITraderConfig = configServer.getConfig<ITraderConfig>(ConfigTypes.TRADER);
 
+        const staticRouterModService = container.resolve<StaticRouterModService>("StaticRouterModService");
         const dynamicRouterModService = container.resolve<DynamicRouterModService>("DynamicRouterModService");
         this.logger.debug(`[${this.mod}] Loading... `);
         this.registerProfileImage(PreSptModLoader, imageRouter);
@@ -62,19 +63,26 @@ class Hephaestus implements IPreSptLoadMod, IPostDBLoadMod {
 
         traderConfig.updateTime.push(traderRefreshRecord);
         Traders[baseJson._id] = baseJson._id;
+        const routeAction = async (_: string, __: any, sessionId: string, output: string) => {
+            try {
+                const databaseServer = container.resolve<DatabaseServer>("DatabaseServer");
+                const tables = databaseServer.getTables();
+                tables.traders[baseJson._id].assort = this.createAssortTable(container, sessionId);
+            } catch (error) {
+            }
+            return output
+        };
+        staticRouterModService.registerStaticRouter(
+            "HephaestusUpdateLogin",
+            [{
+                url: "/launcher/profile/login",
+                action: routeAction
+            }], "spt");
         dynamicRouterModService.registerDynamicRouter(
             "HephaestusUpdateExplicit",
             [{
-                url: "/client/trading/api/getTraderAssort/hephaestus_alxk",
-                action: async (url: string, info: any, sessionId: string, output: string) => {
-                    try {
-                        const databaseServer = container.resolve<DatabaseServer>("DatabaseServer");
-                        const tables = databaseServer.getTables();
-                        tables.traders[baseJson._id].assort = this.createAssortTable(container, sessionId);
-                    } catch (error) {
-                    }
-                    return output
-                }
+                url: `/client/trading/api/getTraderAssort/${baseJson._id}`,
+                action: routeAction
             }], "spt"
         );
 
@@ -100,8 +108,6 @@ class Hephaestus implements IPreSptLoadMod, IPostDBLoadMod {
             base: base,
             questassort: { started: {}, success: {}, fail: {} }
         };
-        // const importer = container.resolve<ImporterUtil>("ImporterUtil");
-        // let profiles = importer.loadRecursive('user/profiles/');
 
 
         for (const locale of locales) {
@@ -131,72 +137,73 @@ class Hephaestus implements IPreSptLoadMod, IPostDBLoadMod {
             nextResupply: 0
         }
 
-        let pool = [];
-        let weaponBuilds: IWeaponBuild[] = [];
-        for (const p in profiles) {
-            if (!profiles[p]?.userbuilds) continue;
-            weaponBuilds = weaponBuilds.concat(profiles[p].userbuilds.weaponBuilds);
-        }
-        if (loadExternal) {
-            const PreSptModLoader: PreSptModLoader = container.resolve<PreSptModLoader>("PreSptModLoader");
-                const path = PreSptModLoader.getModPath(this.mod);
-                let builds = fs.readdirSync(`./${path}/presets/`);
-                let success = 0;
-                builds.forEach((build) => {
-                    try {
-                        let temp = fs.readFileSync(`./${path}/presets/${build}`);
-                        weaponBuilds = weaponBuilds.concat(JSON.parse(temp));
-                        success++;
-                    } catch (error) {
-                        this.logger.error(`loading ${build} failed, check syntax and file structure.`)
-                    }
-                });
-                this.logger.info(`Hephaestus: Loaded/Refreshed ${success} external builds from external sources.`);
-        }
-        this.logger.info(`Hephaestus: Loaded/Refreshed ${weaponBuilds.length} weapon builds in total.`);
-        for (let wb of weaponBuilds) {
-            let preItems = wb.Items;
-            let id = preItems[0]._id;
-            let tpl = preItems[0]._tpl;
-            if (pool.includes(id)) {
-                continue;
-            }
-            pool.push(id)
-            preItems[0] = {
-                "_id": id,
-                "_tpl": tpl,
-                "parentId": "hideout",
-                "slotId": "hideout",
-                // exists in trader items but not weapon build
-                // @ts-ignore
-                "BackgroundColor": "yellow",
-                "upd": {
-                    "UnlimitedCount": true,
-                    "StackObjectsCount": 2000
-                },
-                "preWeapon": true,
-            };
-            let preItemsObj = structuredClone(preItems);
-            for (let preItemObj of preItemsObj) {
-                assortTable.items.push(preItemObj);
-            }
+        let playerbuilds = 0;
+        let externalBuilds = 0;
 
-            let price = config.cost
-            try {
-                price = ragfairPriceService.getDynamicOfferPriceForOffer(preItems, config.currency, false);
-            } catch (error) {}
-            price = price * (1 - ((config.discount || 100) / 100))
-            let offerRequire = [
-                {
-                    "count": price,
-                    "_tpl": config.currency
-                }
-            ];
-            assortTable.barter_scheme[id] = [offerRequire];
-            assortTable.loyal_level_items[id] = 1;
+        // player presets
+        const profileHelper = container.resolve<ProfileHelper>("ProfileHelper");
+        for (const profile of Object.values(profileHelper.getProfiles())) {
+            for (const preset of profile.userbuilds.weaponBuilds) {
+                this.addPreset(ragfairPriceService, assortTable, preset, 1);
+                playerbuilds++;
+            }
         }
+
+        // file presets
+        // file presets go in level 4
+        const PreSptModLoader: PreSptModLoader = container.resolve<PreSptModLoader>("PreSptModLoader");
+        const path = PreSptModLoader.getModPath(this.mod);
+        let builds = fs.readdirSync(`./${path}/presets/`);
+        builds.forEach((build) => {
+            try {
+                const fileContent = fs.readFileSync(`./${path}/presets/${build}`, {encoding: "utf8"});
+                const presets = JSON.parse(fileContent);
+                for (const preset of presets) {
+                    this.addPreset(ragfairPriceService, assortTable, preset, 4);
+                    externalBuilds++;
+                }
+            } catch (error) {
+                this.logger.error(`[${this.mod}] Loading ${build} failed, check syntax and file structure.`);
+            }
+        }, this);
+        this.logger.info(`[${this.mod}] Loaded/refreshed ${playerbuilds} player builds and ${externalBuilds} external builds.`);
 
         return assortTable;
+    }
+
+    private addPreset(ragfairPriceService: RagfairPriceService, assortTable: ITraderAssort, preset: IWeaponBuild, loyaltyLevel: number) {
+        let preItems = preset.Items;
+        let id = preItems[0]._id;
+        let tpl = preItems[0]._tpl;
+
+        preItems[0] = {
+            "_id": id,
+            "_tpl": tpl,
+            "parentId": "hideout",
+            "slotId": "hideout",
+            "upd": {
+                "UnlimitedCount": true,
+                "StackObjectsCount": 2000
+            },
+        };
+        let preItemsObj = structuredClone(preItems);
+        for (let preItemObj of preItemsObj) {
+            assortTable.items.push(preItemObj);
+        }
+
+        let price = config.cost
+        try {
+            price = ragfairPriceService.getDynamicOfferPriceForOffer(preItems, config.currency, false);
+        } catch (error) {}
+        price = price * (1 - (config.discount / 100))
+        let offerRequire = [
+            {
+                "count": price,
+                "_tpl": config.currency
+            }
+        ];
+        assortTable.barter_scheme[id] = [offerRequire];
+        assortTable.loyal_level_items[id] = loyaltyLevel;
     }
 }
 
