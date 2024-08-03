@@ -1,0 +1,90 @@
+[
+    {
+        "Id": "667b44860100136f947db504",
+        "Name": "Gunsmith Part 1",
+        "Root": "d2356c7c589801db3e74b780",
+        "Items": [
+            {
+                "_id": "d2356c7c589801db3e74b780",
+                "_tpl": "54491c4f4bdc2db1078b4568",
+                "parentId": "hideout",
+                "slotId": "hideout",
+                "upd": {
+                    "UnlimitedCount": true,
+                    "StackObjectsCount": 2000
+                }
+            },
+            {
+                "_id": "75a3c71087cc5e748b2055c1",
+                "_tpl": "560835c74bdc2dc8488b456f",
+                "parentId": "d2356c7c589801db3e74b780",
+                "slotId": "mod_barrel"
+            },
+            {
+                "_id": "b019fe18e44f8ad267152799",
+                "_tpl": "55d45f484bdc2d972f8b456d",
+                "parentId": "d2356c7c589801db3e74b780",
+                "slotId": "mod_handguard"
+            },
+            {
+                "_id": "60fb42cb9d835b7a330f695e",
+                "_tpl": "55d484b44bdc2d1d4e8b456d",
+                "parentId": "d2356c7c589801db3e74b780",
+                "slotId": "mod_magazine"
+            },
+            {
+                "_id": "de2ffc2c5c1ca3634a57f498",
+                "_tpl": "56083a334bdc2dc8488b4571",
+                "parentId": "d2356c7c589801db3e74b780",
+                "slotId": "mod_stock"
+            },
+            {
+                "_id": "80aa958dd3d5d26e7ac14c03",
+                "_tpl": "55d48a634bdc2d8b2f8b456a",
+                "parentId": "d2356c7c589801db3e74b780",
+                "slotId": "mod_mount_001"
+            },
+            {
+                "_id": "66b8d7b75b1b2b14dc029b10",
+                "_tpl": "560838c94bdc2d77798b4569",
+                "parentId": "75a3c71087cc5e748b2055c1",
+                "slotId": "mod_muzzle"
+            },
+            {
+                "_id": "255e396c0f93238d6325d106",
+                "_tpl": "5c1bc7752e221602b1779b34",
+                "parentId": "b019fe18e44f8ad267152799",
+                "slotId": "mod_foregrip"
+            },
+            {
+                "_id": "a9a7dd9ca87d2eed8955816f",
+                "_tpl": "5cc9c20cd7f00c001336c65d",
+                "parentId": "b019fe18e44f8ad267152799",
+                "slotId": "mod_tactical_000",
+                "upd": {
+                    "Light": {
+                        "IsActive": true,
+                        "SelectedMode": 0
+                    }
+                }
+            },
+            {
+                "_id": "117745d7d495d81cf24fcb80",
+                "_tpl": "570fd6c2d2720bc6458b457f",
+                "parentId": "80aa958dd3d5d26e7ac14c03",
+                "slotId": "mod_scope",
+                "upd": {
+                    "Sight": {
+                        "ScopesCurrentCalibPointIndexes": [
+                            0
+                        ],
+                        "ScopesSelectedModes": [
+                            0
+                        ],
+                        "SelectedScope": 0
+                    }
+                }
+            }
+        ]
+    }
+]

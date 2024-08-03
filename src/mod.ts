@@ -138,26 +138,33 @@ class Hephaestus implements IPreSptLoadMod, IPostDBLoadMod, IPostSptLoadMod {
         let playerbuilds = 0;
         let externalBuilds = 0;
 
+        const fileLevelPattern = /^.*\.([1-4])\.json$/;
+        const presetLevelPattern = /^.*\.([1-4])$/;
+        function getLevel(name: string, pattern: RegExp, defaultLevel: number): number {
+            const match = name.match(pattern);
+            return match ? parseInt(match[1]) : defaultLevel;
+        }
+
         // player presets
         const profileHelper = container.resolve<ProfileHelper>("ProfileHelper");
         for (const profile of Object.values(profileHelper.getProfiles())) {
             for (const preset of profile.userbuilds.weaponBuilds) {
-                this.addPreset(ragfairPriceService, assortTable, preset, 1);
+                this.addPreset(ragfairPriceService, assortTable, preset, getLevel(preset.Name, presetLevelPattern, 1));
                 playerbuilds++;
             }
         }
 
         // file presets
-        // file presets go in level 4
         const PreSptModLoader: PreSptModLoader = container.resolve<PreSptModLoader>("PreSptModLoader");
         const path = PreSptModLoader.getModPath(this.mod);
         let builds = fs.readdirSync(`./${path}/presets/`);
         builds.forEach((build) => {
+            const fileLevel = getLevel(build, fileLevelPattern, 4);
             try {
-                const fileContent = fs.readFileSync(`./${path}/presets/${build}`, {encoding: "utf8"});
-                const presets = JSON.parse(fileContent);
+                const fileContent = fs.readFileSync(`./${path}/presets/${build}`, { encoding: "utf8" });
+                const presets: IWeaponBuild[] = JSON.parse(fileContent);
                 for (const preset of presets) {
-                    this.addPreset(ragfairPriceService, assortTable, preset, 4);
+                    this.addPreset(ragfairPriceService, assortTable, preset, getLevel(preset.Name, presetLevelPattern, fileLevel));
                     externalBuilds++;
                 }
             } catch (error) {
