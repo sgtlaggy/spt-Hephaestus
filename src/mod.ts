@@ -8,13 +8,13 @@ import { ConfigTypes } from "@spt/models/enums/ConfigTypes";
 import { Traders } from "@spt/models/enums/Traders";
 import { IPostDBLoadMod } from "@spt/models/external/IPostDBLoadMod";
 import { IPreSptLoadMod } from "@spt/models/external/IPreSptLoadMod";
+import { IPostSptLoadMod } from "@spt/models/external/IPostSptLoadMod";
 import { ITraderConfig, UpdateTime } from "@spt/models/spt/config/ITraderConfig";
 import { ILogger } from "@spt/models/spt/utils/ILogger";
 import { ImageRouter } from "@spt/routers/ImageRouter";
 import { ConfigServer } from "@spt/servers/ConfigServer";
 import { DatabaseServer } from "@spt/servers/DatabaseServer";
 import type { DynamicRouterModService } from "@spt/services/mod/dynamicRouter/DynamicRouterModService";
-import type { StaticRouterModService } from "@spt/services/mod/staticRouter/StaticRouterModService";
 import { RagfairPriceService } from "@spt/services/RagfairPriceService";
 import { JsonUtil } from "@spt/utils/JsonUtil";
 import { DependencyContainer } from "tsyringe";
@@ -24,14 +24,13 @@ import fs from "fs";
 import config from "../config/config.json";
 import * as baseJson from "../db/base.json";
 
-class Hephaestus implements IPreSptLoadMod, IPostDBLoadMod {
+class Hephaestus implements IPreSptLoadMod, IPostDBLoadMod, IPostSptLoadMod {
     mod: string
     private logger: ILogger;
     constructor() {
         this.mod = "Hephaestus";
 
     }
-
 
     // Perform these actions before server fully loads
     public preSptLoad(container: DependencyContainer): void {
@@ -41,7 +40,6 @@ class Hephaestus implements IPreSptLoadMod, IPostDBLoadMod {
         const configServer = container.resolve<ConfigServer>("ConfigServer");
         const traderConfig: ITraderConfig = configServer.getConfig<ITraderConfig>(ConfigTypes.TRADER);
 
-        const staticRouterModService = container.resolve<StaticRouterModService>("StaticRouterModService");
         const dynamicRouterModService = container.resolve<DynamicRouterModService>("DynamicRouterModService");
         this.logger.debug(`[${this.mod}] Loading... `);
         this.registerProfileImage(PreSptModLoader, imageRouter);
@@ -63,21 +61,15 @@ class Hephaestus implements IPreSptLoadMod, IPostDBLoadMod {
 
         traderConfig.updateTime.push(traderRefreshRecord);
         Traders[baseJson._id] = baseJson._id;
-        const routeAction = async (_: string, __: any, sessionId: string, output: string) => {
+        const routeAction = async (_: string, __: any, ___: string, output: string) => {
             try {
                 const databaseServer = container.resolve<DatabaseServer>("DatabaseServer");
                 const tables = databaseServer.getTables();
-                tables.traders[baseJson._id].assort = this.createAssortTable(container, sessionId);
+                tables.traders[baseJson._id].assort = this.createAssortTable(container);
             } catch (error) {
             }
             return output
         };
-        staticRouterModService.registerStaticRouter(
-            "HephaestusUpdateLogin",
-            [{
-                url: "/launcher/profile/login",
-                action: routeAction
-            }], "spt");
         dynamicRouterModService.registerDynamicRouter(
             "HephaestusUpdateExplicit",
             [{
@@ -120,6 +112,12 @@ class Hephaestus implements IPreSptLoadMod, IPostDBLoadMod {
         logger.debug(`[${this.mod}] Delayed Loaded`);
     }
 
+    public postSptLoad(container: DependencyContainer): void {
+        const databaseServer = container.resolve<DatabaseServer>("DatabaseServer");
+        const tables = databaseServer.getTables();
+        tables.traders[baseJson._id].assort = this.createAssortTable(container);
+    }
+
     private registerProfileImage(PreSptModLoader: PreSptModLoader, imageRouter: ImageRouter): void {
         // Reference the mod "res" folder
         const imageFilepath = `./${PreSptModLoader.getModPath(this.mod)}res`;
@@ -127,7 +125,7 @@ class Hephaestus implements IPreSptLoadMod, IPostDBLoadMod {
         imageRouter.addRoute(baseJson.avatar.replace(".jpg", ""), `${imageFilepath}/Hephaestus.jpg`);
     }
 
-    private createAssortTable(container: DependencyContainer, sessionId: string): ITraderAssort {
+    private createAssortTable(container: DependencyContainer): ITraderAssort {
         const ragfairPriceService = container.resolve<RagfairPriceService>("RagfairPriceService");
 
         let assortTable: ITraderAssort = {
