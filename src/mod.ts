@@ -7,8 +7,8 @@ import { IWeaponBuild } from "@spt/models/eft/profile/ISptProfile";
 import { ConfigTypes } from "@spt/models/enums/ConfigTypes";
 import { Traders } from "@spt/models/enums/Traders";
 import { IPostDBLoadMod } from "@spt/models/external/IPostDBLoadMod";
-import { IPreSptLoadMod } from "@spt/models/external/IPreSptLoadMod";
 import { IPostSptLoadMod } from "@spt/models/external/IPostSptLoadMod";
+import { IPreSptLoadMod } from "@spt/models/external/IPreSptLoadMod";
 import { ITraderConfig, UpdateTime } from "@spt/models/spt/config/ITraderConfig";
 import { ILogger } from "@spt/models/spt/utils/ILogger";
 import { ImageRouter } from "@spt/routers/ImageRouter";
@@ -16,6 +16,7 @@ import { ConfigServer } from "@spt/servers/ConfigServer";
 import { DatabaseServer } from "@spt/servers/DatabaseServer";
 import type { DynamicRouterModService } from "@spt/services/mod/dynamicRouter/DynamicRouterModService";
 import { RagfairPriceService } from "@spt/services/RagfairPriceService";
+import { TraderAssortService } from "@spt/services/TraderAssortService";
 import { JsonUtil } from "@spt/utils/JsonUtil";
 import { DependencyContainer } from "tsyringe";
 
@@ -63,9 +64,7 @@ class Hephaestus implements IPreSptLoadMod, IPostDBLoadMod, IPostSptLoadMod {
         Traders[baseJson._id] = baseJson._id;
         const routeAction = async (_: string, __: any, ___: string, output: string) => {
             try {
-                const databaseServer = container.resolve<DatabaseServer>("DatabaseServer");
-                const tables = databaseServer.getTables();
-                tables.traders[baseJson._id].assort = this.createAssortTable(container);
+                this.setTraderAssort(container);
             } catch (error) {
             }
             return output
@@ -101,7 +100,6 @@ class Hephaestus implements IPreSptLoadMod, IPostDBLoadMod, IPostSptLoadMod {
             questassort: { started: {}, success: {}, fail: {} }
         };
 
-
         for (const locale of locales) {
             locale[`${baseJson._id} FullName`] = baseJson.name;
             locale[`${baseJson._id} FirstName`] = "Hephaestus";
@@ -113,9 +111,18 @@ class Hephaestus implements IPreSptLoadMod, IPostDBLoadMod, IPostSptLoadMod {
     }
 
     public postSptLoad(container: DependencyContainer): void {
+        this.setTraderAssort(container);
+    }
+
+    private setTraderAssort(container: DependencyContainer): void {
         const databaseServer = container.resolve<DatabaseServer>("DatabaseServer");
         const tables = databaseServer.getTables();
-        tables.traders[baseJson._id].assort = this.createAssortTable(container);
+        const assort = this.createAssortTable(container);
+        tables.traders[baseJson._id].assort = assort;
+
+        // somehow this suppresses the red "Unable to generate flea offers for trader" log message
+        const traderAssortService = container.resolve<TraderAssortService>("TraderAssortService");
+        traderAssortService.setPristineTraderAssort(baseJson._id, assort);
     }
 
     private registerProfileImage(PreSptModLoader: PreSptModLoader, imageRouter: ImageRouter): void {
