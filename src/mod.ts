@@ -184,7 +184,7 @@ class Hephaestus implements IPreSptLoadMod, IPostDBLoadMod, IPostSptLoadMod {
     }
 
     private addPreset(ragfairPriceService: RagfairPriceService, assortTable: ITraderAssort, preset: IWeaponBuild, loyaltyLevel: number) {
-        let preItems = preset.Items;
+        let preItems = structuredClone(preset.Items);
         let id = preItems[0]._id;
         let tpl = preItems[0]._tpl;
 
@@ -198,9 +198,8 @@ class Hephaestus implements IPreSptLoadMod, IPostDBLoadMod, IPostSptLoadMod {
                 "StackObjectsCount": 2000
             },
         };
-        let preItemsObj = structuredClone(preItems);
-        for (let preItemObj of preItemsObj) {
-            assortTable.items.push(preItemObj);
+        for (let preItem of preItems) {
+            assortTable.items.push(preItem);
         }
 
         let price = config.cost
