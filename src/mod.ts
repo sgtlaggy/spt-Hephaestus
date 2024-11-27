@@ -155,6 +155,10 @@ class Hephaestus implements IPreSptLoadMod, IPostDBLoadMod, IPostSptLoadMod {
         // player presets
         const profileHelper = container.resolve<ProfileHelper>("ProfileHelper");
         for (const profile of Object.values(profileHelper.getProfiles())) {
+            if (!profile.userbuilds) { // profile not set up
+                continue;
+            }
+
             for (const preset of profile.userbuilds.weaponBuilds) {
                 this.addPreset(ragfairPriceService, assortTable, preset, getLevel(preset.Name, presetLevelPattern, 1));
                 playerbuilds++;
