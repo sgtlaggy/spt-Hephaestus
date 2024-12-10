@@ -21,6 +21,7 @@ import { JsonUtil } from "@spt/utils/JsonUtil";
 import { DependencyContainer } from "tsyringe";
 
 import fs from "fs";
+import path from "path";
 
 import config from "../config/config.json";
 import * as baseJson from "../db/base.json";
@@ -145,10 +146,9 @@ class Hephaestus implements IPreSptLoadMod, IPostDBLoadMod, IPostSptLoadMod {
         let playerbuilds = 0;
         let externalBuilds = 0;
 
-        const fileLevelPattern = /^.*\.([1-4])\.json$/;
-        const presetLevelPattern = /^.*\.([1-4])$/;
-        function getLevel(name: string, pattern: RegExp, defaultLevel: number): number {
-            const match = name.match(pattern);
+        const presetLevelPattern = /^.*(?:-([1-4]))$/;
+        function getLevel(name: string, defaultLevel: number): number {
+            const match = name.match(presetLevelPattern);
             return match ? parseInt(match[1]) : defaultLevel;
         }
 
@@ -160,22 +160,23 @@ class Hephaestus implements IPreSptLoadMod, IPostDBLoadMod, IPostSptLoadMod {
             }
 
             for (const preset of profile.userbuilds.weaponBuilds) {
-                this.addPreset(ragfairPriceService, assortTable, preset, getLevel(preset.Name, presetLevelPattern, 1));
+                this.addPreset(ragfairPriceService, assortTable, preset, getLevel(preset.Name, 1));
                 playerbuilds++;
             }
         }
 
         // file presets
         const PreSptModLoader: PreSptModLoader = container.resolve<PreSptModLoader>("PreSptModLoader");
-        const path = PreSptModLoader.getModPath(this.mod);
-        let builds = fs.readdirSync(`./${path}/presets/`);
+        const modPath = PreSptModLoader.getModPath(this.mod);
+        let builds = fs.readdirSync(`./${modPath}/presets/`);
         builds.forEach((build) => {
-            const fileLevel = getLevel(build, fileLevelPattern, 4);
+            const buildName = path.basename(build).split(".")[0];
+            const fileLevel = getLevel(buildName, 4);
             try {
-                const fileContent = fs.readFileSync(`./${path}/presets/${build}`, { encoding: "utf8" });
+                const fileContent = fs.readFileSync(`./${modPath}/presets/${build}`, { encoding: "utf8" });
                 const presets: IWeaponBuild[] = JSON.parse(fileContent);
                 for (const preset of presets) {
-                    this.addPreset(ragfairPriceService, assortTable, preset, getLevel(preset.Name, presetLevelPattern, fileLevel));
+                    this.addPreset(ragfairPriceService, assortTable, preset, getLevel(preset.Name, fileLevel));
                     externalBuilds++;
                 }
             } catch (error) {
@@ -209,7 +210,7 @@ class Hephaestus implements IPreSptLoadMod, IPostDBLoadMod, IPostSptLoadMod {
         let price = config.cost
         try {
             price = ragfairPriceService.getDynamicOfferPriceForOffer(preItems, config.currency, false);
-        } catch (error) {}
+        } catch (error) { }
         price = price * (1 - (config.discount / 100))
         let offerRequire = [
             {
