@@ -1,11 +1,11 @@
 {
     "name": "Hephaestus",
-    "version": "2.2.1",
+    "version": "3.0.0",
     "main": "src/mod.js",
     "license": "MIT",
     "author": "alexkarpen",
     "contributors": ["sgtlaggy"],
-    "sptVersion":"^3.9",
+    "sptVersion":"~3.11",
     "scripts": {
         "setup:environment": "npm i",
         "build:unzipped": "copyfiles -e \"./node_modules/**/*.*\" -e \"./dist/**/*.*\" -e \"./package-lock.json\" -e \"./tsconfig.json\" -e \"./README.txt\" -e \"./mod.code-workspace\" ./**/*.* ./dist",
@@ -16,7 +16,7 @@
         "buildinfo": "node ./build.mjs --verbose"
     },
     "devDependencies": {
-        "@types/node": "20.11",
+        "@types/node": "22.12",
         "@typescript-eslint/eslint-plugin": "7.2",
         "@typescript-eslint/parser": "7.2",
         "copyfiles": "2.4.1",
