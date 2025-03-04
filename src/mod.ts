@@ -9,7 +9,7 @@ import { Traders } from "@spt/models/enums/Traders";
 import { IPostDBLoadMod } from "@spt/models/external/IPostDBLoadMod";
 import { IPostSptLoadMod } from "@spt/models/external/IPostSptLoadMod";
 import { IPreSptLoadMod } from "@spt/models/external/IPreSptLoadMod";
-import { ITraderConfig, UpdateTime } from "@spt/models/spt/config/ITraderConfig";
+import { ITraderConfig, IUpdateTime } from "@spt/models/spt/config/ITraderConfig";
 import { ILogger } from "@spt/models/spt/utils/ILogger";
 import { ImageRouter } from "@spt/routers/ImageRouter";
 import { ConfigServer } from "@spt/servers/ConfigServer";
@@ -45,23 +45,15 @@ class Hephaestus implements IPreSptLoadMod, IPostDBLoadMod, IPostSptLoadMod {
         const dynamicRouterModService = container.resolve<DynamicRouterModService>("DynamicRouterModService");
         this.logger.debug(`[${this.mod}] Loading... `);
         this.registerProfileImage(PreSptModLoader, imageRouter);
-        const UpdateTime =
-        {
-            "_name": baseJson._id,
-            "traderId": baseJson._id,
-            "seconds":
-            {
-                "min": 1600,
-                "max": 3600
-            }
-        }
-        traderConfig.updateTime.push(UpdateTime);
-        const traderRefreshRecord: UpdateTime = {
+
+        const traderRefreshRecord: IUpdateTime = {
+            // @ts-ignore    _name is undocumented but present for default traders
+            _name: baseJson._id,
             traderId: baseJson._id,
             seconds: { min: 1600, max: 3600 }
         };
-
         traderConfig.updateTime.push(traderRefreshRecord);
+
         Traders[baseJson._id] = baseJson._id;
         const routeAction = async (_: string, __: any, ___: string, output: string) => {
             try {
