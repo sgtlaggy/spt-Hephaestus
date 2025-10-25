@@ -1,8 +1,8 @@
 ﻿using SPTarkov.DI.Annotations;
 using SPTarkov.Server.Core.DI;
+using SPTarkov.Server.Core.Models.Enums;
 using SPTarkov.Server.Core.Models.Eft.Profile;
 using SPTarkov.Server.Core.Models.Eft.Common.Tables;
-using SPTarkov.Server.Core.Models.Enums;
 using SPTarkov.Server.Core.Models.Utils;
 using SPTarkov.Server.Core.Models.Spt.Config;
 using SPTarkov.Server.Core.Helpers;
@@ -11,7 +11,6 @@ using SPTarkov.Server.Core.Services;
 using SPTarkov.Server.Core.Routers;
 using SPTarkov.Server.Core.Utils;
 using SPTarkov.Server.Core.Utils.Cloners;
-
 
 namespace Drebin;
 
@@ -24,6 +23,7 @@ public class Mod(
     ImageRouter _imageRouter,
     ProfileHelper _profileHelper,
     RagfairPriceService _priceService,
+    RagfairHelper _ragfairHelper,
     ICloner _cloner,
     JsonUtil _json
 ) : IOnLoad
@@ -31,6 +31,12 @@ public class Mod(
     public Task OnLoad()
     {
         var tbase = _data.GetBase();
+        var config = _data.GetConfig();
+
+        if (Enum.TryParse<CurrencyType>(_ragfairHelper.GetCurrencyTag(config.Currency), out var currency))
+        {
+            tbase.Currency = currency;
+        }
 
         var traders = _db.GetTraders();
         traders.Add(
@@ -83,7 +89,9 @@ public class Mod(
     public async void SetAssort()
     {
         var traders = _db.GetTraders();
+
         var tbase = _data.GetBase();
+        var config = _data.GetConfig();
 
         var assort = NewAssort();
 
@@ -97,7 +105,7 @@ public class Mod(
 
             foreach (var preset in profile.UserBuildData.WeaponBuilds)
             {
-                AddPreset(assort, preset, GetPresetLoyaltyLevel(preset.Name) ?? 1);
+                AddPreset(assort, preset, GetPresetLoyaltyLevel(preset.Name) ?? 1, config);
             }
         }
 
@@ -119,14 +127,14 @@ public class Mod(
 
             foreach (var preset in presets)
             {
-                AddPreset(assort, preset, GetPresetLoyaltyLevel(preset.Name) ?? fileLevel);
+                AddPreset(assort, preset, GetPresetLoyaltyLevel(preset.Name) ?? fileLevel, config);
             }
         }
 
         traders[tbase.Id].Assort = assort;
     }
 
-    private void AddPreset(TraderAssort assort, WeaponBuild preset, int loyaltyLevel)
+    private void AddPreset(TraderAssort assort, WeaponBuild preset, int loyaltyLevel, Config config)
     {
         var items = _cloner.Clone(preset.Items)!;
 
@@ -148,11 +156,11 @@ public class Mod(
         };
         assort.Items.AddRange(items);
 
-        var price = _priceService.GetDynamicOfferPriceForOffer(items, Money.ROUBLES, false) * 0.4;
+        var price = _priceService.GetDynamicOfferPriceForOffer(items, config.Currency, false) * config.PriceMultiplier;
         var barter = new BarterScheme()
         {
             Count = price,
-            Template = Money.ROUBLES
+            Template = config.Currency
         };
         assort.BarterScheme.Add(id, [[barter]]);
 

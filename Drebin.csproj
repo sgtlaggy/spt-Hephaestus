@@ -25,7 +25,7 @@
 
     <RemoveDir Directories="$(DistDir)"/>
     <Copy
-        SourceFiles="$(TargetPath)"
+        SourceFiles="$(TargetPath);config.json"
         DestinationFolder="$(ModDir)"/>
     <MakeDir
         Directories="$(ModDir)\presets;$(ModDir)\resources"/>
