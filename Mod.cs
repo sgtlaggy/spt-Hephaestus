@@ -1,5 +1,6 @@
 ﻿using SPTarkov.DI.Annotations;
 using SPTarkov.Server.Core.DI;
+using SPTarkov.Server.Core.Models.Common;
 using SPTarkov.Server.Core.Models.Enums;
 using SPTarkov.Server.Core.Models.Eft.Profile;
 using SPTarkov.Server.Core.Models.Eft.Common.Tables;
@@ -11,6 +12,8 @@ using SPTarkov.Server.Core.Services;
 using SPTarkov.Server.Core.Routers;
 using SPTarkov.Server.Core.Utils;
 using SPTarkov.Server.Core.Utils.Cloners;
+using Drebin.Patches;
+
 
 namespace Drebin;
 
@@ -18,6 +21,7 @@ namespace Drebin;
 public class Mod(
     ISptLogger<Mod> _logger,
     DataService _data,
+    FikaHelper _fika,
     DatabaseService _db,
     ConfigServer _cfg,
     ImageRouter _imageRouter,
@@ -86,7 +90,7 @@ public class Mod(
         return Task.CompletedTask;
     }
 
-    public async void SetAssort()
+    public async void SetAssort(MongoId sessionId)
     {
         var traders = _db.GetTraders();
 
@@ -94,6 +98,22 @@ public class Mod(
         var config = _data.GetConfig();
 
         var assort = NewAssort();
+
+        // fika offline compatibility
+        var otherPlayerBuilds = _fika.GetOtherPlayerBuilds(sessionId);
+        foreach (var (profileId, builds) in otherPlayerBuilds)
+        {
+            // SaveServer.ProfileExists without another DI
+            if (_profileHelper.IsPlayer(profileId))
+            {
+                continue;
+            }
+
+            foreach (var build in builds)
+            {
+                AddPreset(assort, build, GetPresetLoyaltyLevel(build.Name) ?? 1, config);
+            }
+        }
 
         // player presets
         foreach (var profile in _profileHelper.GetProfiles().Values)
@@ -201,6 +221,6 @@ public class AssortHydrator(Mod mod) : IOnLoad
 {
     public Task OnLoad()
     {
-        return Task.Run(mod.SetAssort);
+        return Task.Run(() => mod.SetAssort(new()));
     }
 }

@@ -4,5 +4,6 @@
     "ID_dollars": "5696686a4bdc2da3298b456a",
 
     "currency": "5449016a4bdc2d6f028b456f",
-    "priceMultiplier": 0.4
+    "priceMultiplier": 0.4,
+    "saveOtherProfileData": false
 }

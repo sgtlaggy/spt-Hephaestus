@@ -6,7 +6,7 @@ using SPTarkov.Reflection.Patching;
 using Microsoft.Extensions.DependencyInjection;
 
 
-namespace Drebin;
+namespace Drebin.Patches;
 
 public class GetAssortPatch : AbstractPatch
 {
@@ -19,7 +19,7 @@ public class GetAssortPatch : AbstractPatch
     }
 
     [PatchPrefix]
-    protected static void RebuildAssort(MongoId traderId)
+    protected static void RebuildAssort(MongoId sessionId, MongoId traderId)
     {
         var drebinId = data.GetBase().Id;
 
@@ -28,6 +28,6 @@ public class GetAssortPatch : AbstractPatch
             return;
         }
 
-        mod.SetAssort();
+        mod.SetAssort(sessionId);
     }
 }
