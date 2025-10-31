@@ -174,19 +174,14 @@ public class Mod(
             return null;
         }
 
-        switch (name.Substring(name.Length - 2))
+        return name.Substring(name.Length - 2) switch
         {
-            case "-1":
-                return 1;
-            case "-2":
-                return 2;
-            case "-3":
-                return 3;
-            case "-4":
-                return 4;
-            default:
-                return null;
-        }
+            "-1" => 1,
+            "-2" => 2,
+            "-3" => 3,
+            "-4" => 4,
+            _ => null
+        };
     }
 
     public static TraderAssort NewAssort()
