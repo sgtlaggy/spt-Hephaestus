@@ -33,6 +33,9 @@ public class DataService
     protected TraderBase? _base;
     protected Config? _config;
 
+    protected List<PresetFile>? _presetsCache;
+    protected DateTime _lastRefresh;
+
     protected static string _modDir = System.IO.Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)!;
     protected static string _configFile = System.IO.Path.Join(_modDir, "config.json");
     protected static string _presetsDir = System.IO.Path.Join(_modDir, "presets");
@@ -59,7 +62,16 @@ public class DataService
 
     public async Task<List<PresetFile>> GetPresetFiles()
     {
-        List<PresetFile> files = [];
+        var lastRefresh = _lastRefresh;
+        var now = _lastRefresh = DateTime.Now;
+
+        if ((_presetsCache is not null)
+            && ((now - lastRefresh).TotalSeconds > 3))
+        {
+            return _presetsCache;
+        }
+
+        _presetsCache = [];
 
         foreach (var file in GetPresetFilePaths())
         {
@@ -76,9 +88,9 @@ public class DataService
                 continue;
             }
 
-            files.Add(new(fileLevel, presets!));
+            _presetsCache.Add(new(fileLevel, presets!));
         }
 
-        return files;
+        return _presetsCache;
     }
 }
