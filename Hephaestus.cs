@@ -32,7 +32,7 @@ public record ModMetadata : AbstractModMetadata
     
     public override List<string>? Incompatibilities { get; init; }
     public override Dictionary<string, SemanticVersioning.Range>? ModDependencies { get; init; }
-    public override string? Url { get; init; } = "https://github.com/alexkarpen/hephaestus";
+    public override string? Url { get; init; } = "https://github.com/alexkarpen/hephaestus/tree/csharp";
     public override bool? IsBundleMod { get; init; } = false;
     public override string? License { get; init; } = "MIT";
 }
@@ -74,11 +74,6 @@ public class Hephaestus(
         // Add our trader to the config list, this lets it be seen by the flea market
         _ragfairConfig.Traders.TryAdd(traderBase.Id, true);
 
-        // Add our trader (with no items yet) to the server database
-        // An 'assort' is the term used to describe the offers a trader sells, it has 3 parts to an assort
-        // 1: The item
-        // 2: The barter scheme, cost of the item (money or barter)
-        // 3: The Loyalty level, what rep level is required to buy the item from trader
         addCustomTraderHelper.AddTraderWithEmptyAssortToDb(traderBase);
         fluentAssortCreator
             .CreateSingleAssortItem(ItemTpl.DRINK_PACK_OF_MILK)
@@ -87,14 +82,13 @@ public class Hephaestus(
             .AddMoneyCost(Money.ROUBLES, 2000)
             .AddLoyaltyLevel(1)
             .Export(traderBase.Id);
-        // Add localisation text for our trader to the database so it shows to people playing in different languages
         addCustomTraderHelper.AddTraderToLocales(traderBase, "Hephaestus", "You share the reseller license of your creations to Hephaestus and in return you get a hefty discount.");
 
-        generateAssortHelper.buildAssort();
-        // Happy little log message
+        
         logger.Success("Added Hephaestus trader to server");
-        new GetAssortPatch().Enable();
-        // Send back a success to the server to say our trader is good to go
+        new GetAssortPatchWeaponBuild().Enable();
+        new GetAssortPatchWeaponDelete().Enable();
+        generateAssortHelper.buildAssort();
         return Task.CompletedTask;
     }
 }
