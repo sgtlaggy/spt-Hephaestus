@@ -4,13 +4,11 @@ using SPTarkov.Server.Core.Models.Common;
 using SPTarkov.Server.Core.Models.Enums;
 using SPTarkov.Server.Core.Models.Eft.Profile;
 using SPTarkov.Server.Core.Models.Eft.Common.Tables;
-using SPTarkov.Server.Core.Models.Utils;
 using SPTarkov.Server.Core.Models.Spt.Config;
 using SPTarkov.Server.Core.Helpers;
 using SPTarkov.Server.Core.Servers;
 using SPTarkov.Server.Core.Services;
 using SPTarkov.Server.Core.Routers;
-using SPTarkov.Server.Core.Utils;
 using SPTarkov.Server.Core.Utils.Cloners;
 using Drebin.Patches;
 
@@ -19,7 +17,6 @@ namespace Drebin;
 
 [Injectable(TypePriority = OnLoadOrder.TraderRegistration + 1)]
 public class Mod(
-    ISptLogger<Mod> _logger,
     DataService _data,
     FikaHelper _fika,
     DatabaseService _db,
@@ -28,8 +25,7 @@ public class Mod(
     ProfileHelper _profileHelper,
     RagfairPriceService _priceService,
     RagfairHelper _ragfairHelper,
-    ICloner _cloner,
-    JsonUtil _json
+    ICloner _cloner
 ) : IOnLoad
 {
     public Task OnLoad()
@@ -130,24 +126,11 @@ public class Mod(
         }
 
         // file presets
-        foreach (var fp in _data.GetPresetFiles())
+        foreach (var file in await _data.GetPresetFiles())
         {
-            var fileLevel = GetPresetLoyaltyLevel(System.IO.Path.GetFileNameWithoutExtension(fp)) ?? 4;
-
-            List<WeaponBuild> presets;
-            try
+            foreach (var preset in file.Builds)
             {
-                presets = (await _json.DeserializeFromFileAsync<List<WeaponBuild>>(fp))!;
-            }
-            catch (Exception e)
-            {
-                _logger.Error($"Error reading {System.IO.Path.GetFileName(fp)}:\n{e.ToString()}");
-                continue;
-            }
-
-            foreach (var preset in presets)
-            {
-                AddPreset(assort, preset, GetPresetLoyaltyLevel(preset.Name) ?? fileLevel, config);
+                AddPreset(assort, preset, GetPresetLoyaltyLevel(preset.Name) ?? file.LoyaltyLevel, config);
             }
         }
 
