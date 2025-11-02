@@ -12,17 +12,12 @@ public class GetAssortPatchWeaponDelete : AbstractPatch
 {
     protected override MethodBase GetTargetMethod()
     {
-        // Specify the exact overload: SaveWeaponBuild(MongoId, PresetBuildActionRequestData)
+        // Specify the exact overload: (MongoId, PresetBuildActionRequestData)
         return typeof(BuildController).GetMethod(
-            nameof(BuildController.SaveWeaponBuild),
-            new[]
-            {
-                typeof(SPTarkov.Server.Core.Models.Common.MongoId),
-                typeof(SPTarkov.Server.Core.Models.Eft.PresetBuild.PresetBuildActionRequestData)
-            })!;
+            nameof(BuildController.RemoveBuild))!;
     }
 
-    
+
     [PatchPostfix]
     public static void Postfix(object __instance, SPTarkov.Server.Core.Models.Common.MongoId sessionId, SPTarkov.Server.Core.Models.Eft.PresetBuild.PresetBuildActionRequestData request)
     {

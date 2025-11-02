@@ -58,7 +58,6 @@ namespace Hephaestus
                 }
 
                 var traderBase = modHelper.GetJsonDataFromFile<TraderBase>(pathToMod, "db/base.json");
-                Console.WriteLine(traderBase.Id);
                 // config.json is an object, not a raw string — deserialize to JsonElement (or a typed config class)
                 var config = JsonSerializer.Deserialize<HephaestusConfig>(modHelper.GetJsonDataFromFile<JsonElement>(pathToMod, "config.json"));
 
@@ -68,7 +67,6 @@ namespace Hephaestus
                     return;
                 }
 
-
                 var traders = databaseService.GetTables().Traders;
                 var assort = NewAssort();
                 var currency = Money.EUROS;
@@ -77,8 +75,8 @@ namespace Hephaestus
                     currency = config.currency.ToString();
                 }
                 var discount = config.discount > 0 ? config.discount : 0;
+                Console.WriteLine(discount);
                 List<WeaponBuild> allBuilds = [];
-
                 var presetFiles = System.IO.Directory.GetFiles(pathToMod + "/presets/", "*.json", new EnumerationOptions() { MatchCasing = MatchCasing.CaseInsensitive });
                 foreach (var file in presetFiles)
                 {
@@ -89,30 +87,25 @@ namespace Hephaestus
                     }
 
                 }
-                //get files
-
                 foreach (var (sessionId, profile) in profileHelper.GetProfiles())
                 {
                     if (profile.UserBuildData is null || profile.UserBuildData.WeaponBuilds is null)
                     {
                         continue;
                     }
-
                     foreach (var wb in profile.UserBuildData.WeaponBuilds)
                     {
                         allBuilds.Add(wb);
                     }
                 }
-
+                Console.WriteLine($"Hephaestus: Generated/Refreshed {allBuilds.Count()} builds");
                 foreach (var wb in allBuilds)
                 {
                     if (wb?.Items?[0]?.Id.IsValidMongoId() != true)
                     {
-                        Console.WriteLine("ekanan continue");
                         continue;
                     }
                     var preItems = wb.Items;
-                    Console.WriteLine(wb.Name);
                     if (wb.Root is not null)
                     {
                         var pi = cloner.Clone(wb.Items)!;
@@ -133,10 +126,11 @@ namespace Hephaestus
                         assort.Items.AddRange(pi);
 
 
-                        var priceOfOfferItem = ragfairPriceService.GetDynamicOfferPriceForOffer(pi, Money.ROUBLES, false);
+                        var priceOfOfferItem = ragfairPriceService.GetDynamicOfferPriceForOffer(pi, config.currency, false);
                         if (discount > 0)
                         {
-                            priceOfOfferItem = priceOfOfferItem - priceOfOfferItem * (1 - discount / 100);
+                            priceOfOfferItem = priceOfOfferItem - (priceOfOfferItem * (discount / 100));
+                            
                         }
 
                         var barter = new BarterScheme()

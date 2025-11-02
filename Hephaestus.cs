@@ -26,8 +26,8 @@ public record ModMetadata : AbstractModMetadata
     public override string Name { get; init; } = "Hephaestus";
     public override string Author { get; init; } = "alexkarpen";
     public override List<string>? Contributors { get; init; } = ["alexkarpen"];
-    public override SemanticVersioning.Version Version { get; init; } = new("1.0.0");
-    public override SemanticVersioning.Range SptVersion { get; init; } = new("~4.0.0");
+    public override SemanticVersioning.Version Version { get; init; } = new("2.0.1");
+    public override SemanticVersioning.Range SptVersion { get; init; } = new("~4.0.3");
     
     
     public override List<string>? Incompatibilities { get; init; }
@@ -38,7 +38,7 @@ public record ModMetadata : AbstractModMetadata
 }
 
 // This line tells the class to load right after "PostDBModLoader" occurs
-[Injectable(TypePriority = OnLoadOrder.PostDBModLoader + 1)]
+[Injectable(TypePriority = OnLoadOrder.PostSptModLoader + 1)]
 public class Hephaestus(
     ISptLogger<Hephaestus> logger,
     ModHelper modHelper,
@@ -82,13 +82,13 @@ public class Hephaestus(
             .AddMoneyCost(Money.ROUBLES, 2000)
             .AddLoyaltyLevel(1)
             .Export(traderBase.Id);
-        addCustomTraderHelper.AddTraderToLocales(traderBase, "Hephaestus", "You share the reseller license of your creations to Hephaestus and in return you get a hefty discount.");
+        generateAssortHelper.buildAssort();
 
         
+        addCustomTraderHelper.AddTraderToLocales(traderBase, "Hephaestus", "You share the reseller license of your creations to Hephaestus and in return you get a hefty discount.");
         logger.Success("Added Hephaestus trader to server");
         new GetAssortPatchWeaponBuild().Enable();
         new GetAssortPatchWeaponDelete().Enable();
-        generateAssortHelper.buildAssort();
         return Task.CompletedTask;
     }
 }

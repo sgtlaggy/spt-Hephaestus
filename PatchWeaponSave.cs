@@ -14,12 +14,7 @@ public class GetAssortPatchWeaponBuild : AbstractPatch
     {
         // Specify the exact overload: SaveWeaponBuild(MongoId, PresetBuildActionRequestData)
         return typeof(BuildController).GetMethod(
-            nameof(BuildController.SaveWeaponBuild),
-            new[]
-            {
-                typeof(SPTarkov.Server.Core.Models.Common.MongoId),
-                typeof(SPTarkov.Server.Core.Models.Eft.PresetBuild.PresetBuildActionRequestData)
-            })!;
+            nameof(BuildController.SaveWeaponBuild))!;
     }
 
     
