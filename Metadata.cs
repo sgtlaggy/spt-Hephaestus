@@ -2,6 +2,8 @@ using System.Reflection;
 using SPTarkov.Server.Core.Models.Spt.Mod;
 
 
+namespace Drebin;
+
 public record ModMetadata : AbstractModMetadata
 {
     public override string ModGuid { get; init; } = "com.sgtlaggy.drebin";
