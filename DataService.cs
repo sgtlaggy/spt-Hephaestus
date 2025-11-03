@@ -39,9 +39,9 @@ public class DataService
     protected static string _modDir = System.IO.Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)!;
     protected static string _configFile = System.IO.Path.Join(_modDir, "config.json");
     protected static string _presetsDir = System.IO.Path.Join(_modDir, "presets");
-    protected static string _resourceDir = System.IO.Path.Join(_modDir, "resources");
-    protected static string _baseFile = System.IO.Path.Join(_resourceDir, "base.json");
-    protected static string _imageFile = System.IO.Path.Join(_resourceDir, "avatar.jpg");
+    protected static string _dbDir = System.IO.Path.Join(_modDir, "db");
+    protected static string _baseFile = System.IO.Path.Join(_dbDir, "base.json");
+    protected static string _imageFile = System.IO.Path.Join(_dbDir, "avatar.jpg");
 
     public DataService(ISptLogger<DataService> logger, JsonUtil jsonUtil)
     {
