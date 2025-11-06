@@ -19,9 +19,6 @@ public record Config
 
     [JsonPropertyName("priceMultiplier")]
     public double PriceMultiplier { get; set; }
-
-    [JsonPropertyName("saveOtherProfileData")]
-    public bool SaveOtherProfileData { get; set; }
 }
 
 [Injectable(InjectionType = InjectionType.Singleton)]

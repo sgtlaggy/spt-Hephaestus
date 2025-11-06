@@ -17,18 +17,12 @@ public class SharedWeaponBuilds : Dictionary<MongoId, List<WeaponBuild>>;
 
 [Injectable]
 public class FikaHelper(
-    DataService _data,
     IReadOnlyList<SptMod> _mods,
     ProfileDataService _profileDataService
 ) : IOnLoad
 {
     public Task OnLoad()
     {
-        if (!_data.GetConfig().SaveOtherProfileData)
-        {
-            return Task.CompletedTask;
-        }
-
         if (_mods.Any((mod) => mod.ModMetadata.ModGuid == "Fika"))
         {
             new ProfileDownloadPatch().Enable();
@@ -54,7 +48,7 @@ public class ProfileDownloadPatch : AbstractPatch
     }
 
     [PatchPrefix]
-    protected static void BuildModData(MongoId sessionId)
+    protected static void SaveOtherBuildsToProfileModData(MongoId sessionId)
     {
         SharedWeaponBuilds otherProfileBuilds = [];
 
