@@ -38,7 +38,7 @@ public record ModMetadata : AbstractModMetadata
 }
 
 // This line tells the class to load right after "PostDBModLoader" occurs
-[Injectable(TypePriority = OnLoadOrder.PostSptModLoader + 1)]
+[Injectable(TypePriority = OnLoadOrder.TraderRegistration + 1)]
 public class Hephaestus(
     ISptLogger<Hephaestus> logger,
     ModHelper modHelper,
@@ -82,7 +82,6 @@ public class Hephaestus(
             .AddMoneyCost(Money.ROUBLES, 2000)
             .AddLoyaltyLevel(1)
             .Export(traderBase.Id);
-        generateAssortHelper.buildAssort();
 
         
         addCustomTraderHelper.AddTraderToLocales(traderBase, "Hephaestus", "You share the reseller license of your creations to Hephaestus and in return you get a hefty discount.");
@@ -94,3 +93,27 @@ public class Hephaestus(
 }
 
 
+[Injectable(TypePriority = OnLoadOrder.PostSptModLoader + 1)]
+public class HephaestusAfter(
+    ISptLogger<Hephaestus> logger,
+    ModHelper modHelper,
+    DatabaseService databaseService,
+    ImageRouter imageRouter,
+    ConfigServer configServer,
+    TimeUtil timeUtil,
+    ICloner cloner,
+    FluentTraderAssortCreator fluentAssortCreator, // This is a custom class we add for this mod, we made it injectable so it can be accessed like other classes here
+    AddCustomTraderHelper addCustomTraderHelper, // This is a custom class we add for this mod, we made it injectable so it can be accessed like other classes here
+    GenerateAssort generateAssortHelper
+    )
+    : IOnLoad
+{
+    private readonly TraderConfig _traderConfig = configServer.GetConfig<TraderConfig>();
+    private readonly RagfairConfig _ragfairConfig = configServer.GetConfig<RagfairConfig>();
+
+    public Task OnLoad()
+    {
+        generateAssortHelper.buildAssort();
+        return Task.CompletedTask;
+    }
+}
