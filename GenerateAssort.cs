@@ -70,12 +70,11 @@ namespace Hephaestus
                 var traders = databaseService.GetTables().Traders;
                 var assort = NewAssort();
                 var currency = Money.EUROS;
-                if (config.currency is not null)
+                if (config?.currency is not null)
                 {
                     currency = config.currency.ToString();
                 }
-                var discount = config.discount > 0 ? config.discount : 0;
-                Console.WriteLine(discount);
+                var discount = config?.discount > 0 ? config.discount : 0;
                 List<WeaponBuild> allBuilds = [];
                 var presetFiles = System.IO.Directory.GetFiles(pathToMod + "/presets/", "*.json", new EnumerationOptions() { MatchCasing = MatchCasing.CaseInsensitive });
                 foreach (var file in presetFiles)
@@ -124,9 +123,7 @@ namespace Hephaestus
                             }
                         };
                         assort.Items.AddRange(pi);
-
-
-                        var priceOfOfferItem = ragfairPriceService.GetDynamicOfferPriceForOffer(pi, config.currency, false);
+                        var priceOfOfferItem = ragfairPriceService.GetDynamicOfferPriceForOffer(pi, currency, false);
                         if (discount > 0)
                         {
                             priceOfOfferItem = priceOfOfferItem - (priceOfOfferItem * (discount / 100));
@@ -136,7 +133,7 @@ namespace Hephaestus
                         var barter = new BarterScheme()
                         {
                             Count = priceOfOfferItem,
-                            Template = config.currency
+                            Template = currency
                         };
 
                         assort.BarterScheme.Add(pi[0].Id, [[barter]]);

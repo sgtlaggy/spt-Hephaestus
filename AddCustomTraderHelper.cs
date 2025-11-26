@@ -3,6 +3,7 @@ using SPTarkov.Server.Core.DI;
 using SPTarkov.Server.Core.Models.Common;
 using SPTarkov.Server.Core.Models.Eft.Common.Tables;
 using SPTarkov.Server.Core.Models.Spt.Config;
+using SPTarkov.Server.Core.Models.Utils;
 using SPTarkov.Server.Core.Services;
 using SPTarkov.Server.Core.Utils.Cloners;
 
@@ -14,6 +15,7 @@ namespace Hephaestus
     [Injectable(TypePriority = OnLoadOrder.PostDBModLoader + 1)]
     public class AddCustomTraderHelper(
         ICloner cloner,
+        ISptLogger<AddCustomTraderHelper> logger,
         DatabaseService databaseService)
     {
         /// <summary>
@@ -107,6 +109,18 @@ namespace Hephaestus
         /// They there have various 'child' items that attach off of the root, the discord mod support can help direct you on how to figure our what you need
         /// </summary>
         /// <returns>A complete glock</returns>
+        public void OverwriteTraderAssort(string traderId, TraderAssort newAssorts)
+        {
+            if (!databaseService.GetTables().Traders.TryGetValue(traderId, out var traderToEdit))
+            {
+                logger.Warning($"Unable to update assorts for trader: {traderId}, they couldn't be found on the server");
+
+                return;
+            }
+
+    // Override the traders assorts with the ones we passed in
+    traderToEdit.Assort = newAssorts;
+        }
         
     }
 }
