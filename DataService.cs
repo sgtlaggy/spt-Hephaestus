@@ -7,6 +7,8 @@ using SPTarkov.Server.Core.Models.Eft.Profile;
 using SPTarkov.Server.Core.Models.Eft.Common.Tables;
 using SPTarkov.Server.Core.Models.Utils;
 
+using Path = System.IO.Path;
+
 
 namespace Drebin;
 
@@ -33,12 +35,12 @@ public class DataService
     protected List<PresetFile>? _presetsCache;
     protected DateTime _lastRefresh;
 
-    protected static string _modDir = System.IO.Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)!;
-    protected static string _configFile = System.IO.Path.Join(_modDir, "config.json");
-    protected static string _presetsDir = System.IO.Path.Join(_modDir, "presets");
-    protected static string _dbDir = System.IO.Path.Join(_modDir, "db");
-    protected static string _baseFile = System.IO.Path.Join(_dbDir, "base.json");
-    protected static string _imageFile = System.IO.Path.Join(_dbDir, "avatar.jpg");
+    protected static string _modDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)!;
+    protected static string _configFile = Path.Join(_modDir, "config.json");
+    protected static string _presetsDir = Path.Join(_modDir, "presets");
+    protected static string _dbDir = Path.Join(_modDir, "db");
+    protected static string _baseFile = Path.Join(_dbDir, "base.json");
+    protected static string _imageFile = Path.Join(_dbDir, "avatar.jpg");
 
     public DataService(ISptLogger<DataService> logger, JsonUtil jsonUtil)
     {
@@ -51,7 +53,7 @@ public class DataService
     public Config GetConfig() => _config ?? throw new Exception("Invalid config.");
     public TraderBase GetBase() => _base ?? throw new Exception("Invalid trader base.");
     public string GetImagePath() => _imageFile;
-    public string[] GetPresetFilePaths() => System.IO.Directory.GetFiles(
+    public string[] GetPresetFilePaths() => Directory.GetFiles(
             _presetsDir,
             "*.json",
             new EnumerationOptions() { MatchCasing = MatchCasing.CaseInsensitive }
@@ -72,7 +74,7 @@ public class DataService
 
         foreach (var file in GetPresetFilePaths())
         {
-            var fileLevel = Mod.GetPresetLoyaltyLevel(System.IO.Path.GetFileNameWithoutExtension(file)) ?? 4;
+            var fileLevel = Mod.GetPresetLoyaltyLevel(Path.GetFileNameWithoutExtension(file)) ?? 4;
 
             List<WeaponBuild>? presets;
             try
@@ -81,7 +83,7 @@ public class DataService
             }
             catch (Exception e)
             {
-                _logger.Error($"Error reading {System.IO.Path.GetFileName(file)}:\n{e.ToString()}");
+                _logger.Error($"Error reading {Path.GetFileName(file)}:\n{e.ToString()}");
                 continue;
             }
 
