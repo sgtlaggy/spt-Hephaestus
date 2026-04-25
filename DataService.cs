@@ -1,4 +1,6 @@
 using System.Reflection;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using SPTarkov.DI.Annotations;
 using SPTarkov.Server.Core.Utils;
@@ -12,7 +14,17 @@ using Path = System.IO.Path;
 
 namespace Drebin;
 
-using PresetFile = (int LoyaltyLevel, List<WeaponBuild> Builds);
+public record PresetFile
+{
+    public int LoyaltyLevel { get; set; }
+    public List<WeaponBuild> Builds { get; set; } = [];
+
+    public PresetFile(int level, List<WeaponBuild> builds)
+    {
+        LoyaltyLevel = level;
+        Builds = builds;
+    }
+}
 
 public record Config
 {
@@ -21,6 +33,9 @@ public record Config
 
     [JsonPropertyName("priceMultiplier")]
     public double PriceMultiplier { get; set; }
+
+    [JsonPropertyName("presetDirectories")]
+    public IEnumerable<string> PresetDirectories { get; set; } = [];
 }
 
 [Injectable(InjectionType = InjectionType.Singleton)]
@@ -29,6 +44,7 @@ public class DataService
     protected static int DefaultFileLoyaltyLevel = 4;
 
     protected ISptLogger<DataService> _logger;
+    protected FileUtil _fileUtil;
     protected JsonUtil _jsonUtil;
 
     protected TraderBase? _base;
@@ -39,14 +55,14 @@ public class DataService
 
     protected static string _modDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)!;
     protected static string _configFile = Path.Join(_modDir, "config.json");
-    protected static string _presetsDir = Path.Join(_modDir, "presets");
     protected static string _dbDir = Path.Join(_modDir, "db");
     protected static string _baseFile = Path.Join(_dbDir, "base.json");
     protected static string _imageFile = Path.Join(_dbDir, "avatar.jpg");
 
-    public DataService(ISptLogger<DataService> logger, JsonUtil jsonUtil)
+    public DataService(ISptLogger<DataService> logger, FileUtil fileUtil, JsonUtil jsonUtil)
     {
         _logger = logger;
+        _fileUtil = fileUtil;
         _jsonUtil = jsonUtil;
         _base = jsonUtil.DeserializeFromFile<TraderBase>(_baseFile);
         _config = jsonUtil.DeserializeFromFile<Config>(_configFile);
@@ -55,8 +71,8 @@ public class DataService
     public Config GetConfig() => _config ?? throw new Exception("Invalid config.");
     public TraderBase GetBase() => _base ?? throw new Exception("Invalid trader base.");
     public string GetImagePath() => _imageFile;
-    public string[] GetPresetFilePaths() => Directory.GetFiles(
-            _presetsDir,
+    public string[] GetPresetFilePaths(string dir) => Directory.GetFiles(
+            dir,
             "*.json",
             new EnumerationOptions() { MatchCasing = MatchCasing.CaseInsensitive }
     );
@@ -74,24 +90,59 @@ public class DataService
 
         _presetsCache = [];
 
-        foreach (var file in GetPresetFilePaths())
+        foreach (var dir in GetConfig().PresetDirectories)
         {
-            var fileLevel = Mod.GetPresetLoyaltyLevel(Path.GetFileNameWithoutExtension(file)) ?? DefaultFileLoyaltyLevel;
-
-            List<WeaponBuild>? presets;
             try
             {
-                presets = await _jsonUtil.DeserializeFromFileAsync<List<WeaponBuild>>(file);
+                foreach (var file in GetPresetFilePaths(Path.Join(_modDir, dir)))
+                {
+                    var presets = await ReadPresetFile(file);
+                    if (presets is not null)
+                    {
+                        _presetsCache.Add(presets);
+                    }
+                }
             }
-            catch (Exception e)
+            catch (DirectoryNotFoundException)
             {
-                _logger.Error($"Error reading {Path.GetFileName(file)}:\n{e.ToString()}");
-                continue;
+                _logger.Warning($"Preset directory {dir} not found.");
             }
-
-            _presetsCache.Add(new(fileLevel, presets!));
         }
 
         return _presetsCache;
+    }
+
+    protected async Task<PresetFile?> ReadPresetFile(string file)
+    {
+        int? fileLevel = Mod.GetPresetLoyaltyLevel(Path.GetFileNameWithoutExtension(file)) ?? null;
+        List<WeaponBuild>? presets;
+        try
+        {
+            var content = await _fileUtil.ReadFileAsync(file);
+            var node = JsonNode.Parse(content);
+            if (node?.GetValueKind() == JsonValueKind.Array)
+            {
+                presets = node.Deserialize<List<WeaponBuild>>()!;
+                fileLevel = fileLevel ?? DefaultFileLoyaltyLevel;
+            }
+            else if (node?.GetValueKind() == JsonValueKind.Object)
+            {
+                var preset = node.Deserialize<WeaponBuild>()!;
+                presets = new([preset]);
+                fileLevel = fileLevel ?? Mod.GetPresetLoyaltyLevel(preset.Name) ?? DefaultFileLoyaltyLevel;
+            }
+            else
+            {
+                _logger.Warning($"Error reading {Path.GetFileName(file)}: Does not contain weapon build.");
+                return null;
+            }
+        }
+        catch (Exception e)
+        {
+            _logger.Error($"Error reading {Path.GetFileName(file)}:\n{e.ToString()}");
+            return null;
+        }
+
+        return new(fileLevel.Value, presets);
     }
 }
