@@ -23,11 +23,9 @@ public class GetAssortPatch : AbstractPatch
     {
         var drebinId = data.GetBase().Id;
 
-        if (traderId != drebinId)
+        if (traderId == drebinId)
         {
-            return;
+            mod.SetAssort(sessionId);
         }
-
-        mod.SetAssort(sessionId);
     }
 }
