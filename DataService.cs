@@ -26,6 +26,8 @@ public record Config
 [Injectable(InjectionType = InjectionType.Singleton)]
 public class DataService
 {
+    protected static int DefaultFileLoyaltyLevel = 4;
+
     protected ISptLogger<DataService> _logger;
     protected JsonUtil _jsonUtil;
 
@@ -74,7 +76,7 @@ public class DataService
 
         foreach (var file in GetPresetFilePaths())
         {
-            var fileLevel = Mod.GetPresetLoyaltyLevel(Path.GetFileNameWithoutExtension(file)) ?? 4;
+            var fileLevel = Mod.GetPresetLoyaltyLevel(Path.GetFileNameWithoutExtension(file)) ?? DefaultFileLoyaltyLevel;
 
             List<WeaponBuild>? presets;
             try
