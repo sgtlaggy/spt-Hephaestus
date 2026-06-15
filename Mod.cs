@@ -1,14 +1,14 @@
 ﻿using SPTarkov.DI.Annotations;
 using SPTarkov.Server.Core.DI;
+using SPTarkov.Server.Core.Helpers;
 using SPTarkov.Server.Core.Models.Common;
 using SPTarkov.Server.Core.Models.Enums;
 using SPTarkov.Server.Core.Models.Eft.Profile;
 using SPTarkov.Server.Core.Models.Eft.Common.Tables;
 using SPTarkov.Server.Core.Models.Spt.Config;
-using SPTarkov.Server.Core.Helpers;
+using SPTarkov.Server.Core.Routers;
 using SPTarkov.Server.Core.Servers;
 using SPTarkov.Server.Core.Services;
-using SPTarkov.Server.Core.Routers;
 using SPTarkov.Server.Core.Utils.Cloners;
 using Drebin.Patches;
 
@@ -82,6 +82,7 @@ public class Mod(
         );
 
         new GetAssortPatch().Enable();
+        new SaveBuildRemoveAmmoPatch().Enable();
 
         return Task.CompletedTask;
     }
