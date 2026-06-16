@@ -1,6 +1,5 @@
 using System.Reflection;
 using System.Text.Json;
-using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using SPTarkov.DI.Annotations;
 using SPTarkov.Server.Core.Utils;
@@ -119,15 +118,15 @@ public class DataService
         try
         {
             var content = await _fileUtil.ReadFileAsync(file);
-            var node = JsonNode.Parse(content);
-            if (node?.GetValueKind() == JsonValueKind.Array)
+            var firstChar = content.SkipWhile((ch) => Char.IsWhiteSpace(ch)).FirstOrDefault();
+            if (firstChar == '[')
             {
-                presets = node.Deserialize<List<WeaponBuild>>()!;
+                presets = _jsonUtil.Deserialize<List<WeaponBuild>>(content)!;
                 fileLevel = fileLevel ?? DefaultFileLoyaltyLevel;
             }
-            else if (node?.GetValueKind() == JsonValueKind.Object)
+            else if (firstChar == '{')
             {
-                var preset = node.Deserialize<WeaponBuild>()!;
+                var preset = _jsonUtil.Deserialize<WeaponBuild>(content)!;
                 presets = new([preset]);
                 fileLevel = fileLevel ?? Mod.GetPresetLoyaltyLevel(preset.Name) ?? DefaultFileLoyaltyLevel;
             }
