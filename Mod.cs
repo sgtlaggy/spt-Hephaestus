@@ -6,6 +6,7 @@ using SPTarkov.Server.Core.Models.Enums;
 using SPTarkov.Server.Core.Models.Eft.Profile;
 using SPTarkov.Server.Core.Models.Eft.Common.Tables;
 using SPTarkov.Server.Core.Models.Spt.Config;
+using SPTarkov.Server.Core.Models.Utils;
 using SPTarkov.Server.Core.Routers;
 using SPTarkov.Server.Core.Servers;
 using SPTarkov.Server.Core.Services;
@@ -17,6 +18,7 @@ namespace Drebin;
 
 [Injectable(TypePriority = OnLoadOrder.TraderRegistration + 1)]
 public class Mod(
+    ISptLogger<Mod> _logger,
     DataService _data,
     FikaHelper _fika,
     DatabaseService _db,
@@ -145,6 +147,15 @@ public class Mod(
         var id = items[0].Id;
         var tpl = items[0].Template;
 
+        try
+        {
+            assort.LoyalLevelItems.Add(id, loyaltyLevel);
+        }
+        catch
+        {
+            _logger.Warning($"Duplicate root item with ID {id}.");
+            return;
+        }
 
         items[0] = new()
         {
@@ -167,8 +178,6 @@ public class Mod(
             Template = config.Currency
         };
         assort.BarterScheme.Add(id, [[barter]]);
-
-        assort.LoyalLevelItems.Add(id, loyaltyLevel);
     }
 
     public static int? GetPresetLoyaltyLevel(string? name)
