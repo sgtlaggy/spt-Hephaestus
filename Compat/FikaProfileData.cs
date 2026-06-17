@@ -11,9 +11,9 @@ using Microsoft.Extensions.DependencyInjection;
 using FikaServer.Controllers;
 
 
-namespace Drebin.Patches;
+namespace Drebin.Compat;
 
-public class SharedWeaponBuilds : Dictionary<MongoId, List<WeaponBuild>>;
+public class BuildsByProfileDict : Dictionary<MongoId, List<WeaponBuild>>;
 
 [Injectable]
 public class FikaHelper(
@@ -31,9 +31,9 @@ public class FikaHelper(
         return Task.CompletedTask;
     }
 
-    public SharedWeaponBuilds GetOtherPlayerBuilds(MongoId sessionId)
+    public BuildsByProfileDict GetOtherPlayerBuilds(MongoId sessionId)
     {
-        return _profileDataService.GetProfileData<SharedWeaponBuilds>(sessionId, "drebin") ?? [];
+        return _profileDataService.GetProfileData<BuildsByProfileDict>(sessionId, "drebin") ?? [];
     }
 }
 
@@ -50,7 +50,7 @@ public class ProfileDownloadPatch : AbstractPatch
     [PatchPrefix]
     protected static void SaveOtherBuildsToProfileModData(MongoId sessionId)
     {
-        SharedWeaponBuilds otherProfileBuilds = [];
+        BuildsByProfileDict otherProfileBuilds = [];
 
         foreach (var (profileId, profile) in _profileHelper.GetProfiles())
         {

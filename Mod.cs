@@ -12,6 +12,7 @@ using SPTarkov.Server.Core.Servers;
 using SPTarkov.Server.Core.Services;
 using SPTarkov.Server.Core.Utils.Cloners;
 using Drebin.Patches;
+using Drebin.Compat;
 
 
 namespace Drebin;
@@ -20,7 +21,7 @@ namespace Drebin;
 public class Mod(
     ISptLogger<Mod> _logger,
     DataService _data,
-    FikaHelper _fika,
+    FikaHelper _fikaHelper,
     DatabaseService _db,
     ConfigServer _cfg,
     ImageRouter _imageRouter,
@@ -98,22 +99,6 @@ public class Mod(
 
         var assort = NewAssort();
 
-        // fika offline compatibility
-        var otherPlayerBuilds = _fika.GetOtherPlayerBuilds(sessionId);
-        foreach (var (profileId, builds) in otherPlayerBuilds)
-        {
-            // SaveServer.ProfileExists without another DI
-            if (_profileHelper.IsPlayer(profileId))
-            {
-                continue;
-            }
-
-            foreach (var build in builds)
-            {
-                AddPreset(assort, build, GetPresetLoyaltyLevel(build.Name) ?? 1, config);
-            }
-        }
-
         // player presets
         foreach (var profile in _profileHelper.GetProfiles().Values)
         {
@@ -134,6 +119,22 @@ public class Mod(
             foreach (var preset in file.Builds)
             {
                 AddPreset(assort, preset, GetPresetLoyaltyLevel(preset.Name) ?? file.LoyaltyLevel, config);
+            }
+        }
+
+        // fika offline compatibility
+        var otherPlayerBuilds = _fikaHelper.GetOtherPlayerBuilds(sessionId);
+        foreach (var (profileId, builds) in otherPlayerBuilds)
+        {
+            // SaveServer.ProfileExists without another DI
+            if (_profileHelper.IsPlayer(profileId))
+            {
+                continue;
+            }
+
+            foreach (var build in builds)
+            {
+                AddPreset(assort, build, GetPresetLoyaltyLevel(build.Name) ?? 1, config);
             }
         }
 
