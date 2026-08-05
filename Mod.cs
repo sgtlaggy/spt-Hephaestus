@@ -85,7 +85,7 @@ public class Mod(
         );
 
         new GetAssortPatch().Enable();
-        new SaveBuildRemoveAmmoPatch().Enable();
+        new SaveBuildPatch().Enable();
 
         return Task.CompletedTask;
     }
