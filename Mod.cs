@@ -1,27 +1,27 @@
-﻿using SPTarkov.DI.Annotations;
+﻿using Drebin.Compat;
+using Drebin.Patches;
+using SPTarkov.DI.Annotations;
 using SPTarkov.Server.Core.DI;
 using SPTarkov.Server.Core.Helpers;
 using SPTarkov.Server.Core.Models.Common;
-using SPTarkov.Server.Core.Models.Enums;
-using SPTarkov.Server.Core.Models.Eft.Profile;
 using SPTarkov.Server.Core.Models.Eft.Common.Tables;
+using SPTarkov.Server.Core.Models.Eft.Profile;
+using SPTarkov.Server.Core.Models.Enums;
 using SPTarkov.Server.Core.Models.Spt.Config;
 using SPTarkov.Server.Core.Models.Utils;
 using SPTarkov.Server.Core.Routers;
 using SPTarkov.Server.Core.Servers;
 using SPTarkov.Server.Core.Services;
 using SPTarkov.Server.Core.Utils.Cloners;
-using Drebin.Patches;
-using Drebin.Compat;
 
 
 namespace Drebin;
 
-[Injectable(TypePriority = OnLoadOrder.TraderRegistration + 1)]
+[Injectable(TypePriority = OnLoadOrder.TraderRegistration + 1, InjectionType = InjectionType.Singleton)]
 public class Mod(
     ISptLogger<Mod> _logger,
     DataService _data,
-    FikaHelper _fikaHelper,
+    SharedWeaponBuildsHelper _swbHelper,
     DatabaseService _db,
     ConfigServer _cfg,
     ImageRouter _imageRouter,
@@ -90,7 +90,7 @@ public class Mod(
         return Task.CompletedTask;
     }
 
-    public async void SetAssort(MongoId sessionId)
+    public async void SetAssort()
     {
         var traders = _db.GetTraders();
 
@@ -98,6 +98,7 @@ public class Mod(
         var config = _data.GetConfig();
 
         var assort = NewAssort();
+        HashSet<MongoId> buildIdCache = [];
 
         // player presets
         foreach (var profile in _profileHelper.GetProfiles().Values)
@@ -109,7 +110,7 @@ public class Mod(
 
             foreach (var preset in profile.UserBuildData.WeaponBuilds)
             {
-                AddPreset(assort, preset, GetPresetLoyaltyLevel(preset.Name) ?? 1, config);
+                AddPreset(assort, preset, GetPresetLoyaltyLevel(preset.Name) ?? 1, config, buildIdCache);
             }
         }
 
@@ -118,31 +119,33 @@ public class Mod(
         {
             foreach (var preset in file.Builds)
             {
-                AddPreset(assort, preset, GetPresetLoyaltyLevel(preset.Name) ?? file.LoyaltyLevel, config);
+                AddPreset(assort, preset, GetPresetLoyaltyLevel(preset.Name) ?? file.LoyaltyLevel, config, buildIdCache);
             }
         }
 
-        // fika offline compatibility
-        var otherPlayerBuilds = _fikaHelper.GetOtherPlayerBuilds(sessionId);
-        foreach (var (profileId, builds) in otherPlayerBuilds)
+        // Shared Weapon Builds compatibility
+        foreach (var build in _swbHelper.GetSharedBuilds())
         {
-            // SaveServer.ProfileExists without another DI
-            if (_profileHelper.IsPlayer(profileId))
-            {
-                continue;
-            }
-
-            foreach (var build in builds)
-            {
-                AddPreset(assort, build, GetPresetLoyaltyLevel(build.Name) ?? 1, config);
-            }
+            AddPreset(assort, build, GetPresetLoyaltyLevel(build.Name) ?? 1, config, buildIdCache);
         }
 
         traders[tbase.Id].Assort = assort;
     }
 
-    private void AddPreset(TraderAssort assort, WeaponBuild preset, int loyaltyLevel, Config config)
+    private void AddPreset(
+        TraderAssort assort,
+        WeaponBuild preset,
+        int loyaltyLevel,
+        Config config,
+        HashSet<MongoId> buildIdCache
+    )
     {
+        if (buildIdCache.Contains(preset.Id))
+        {
+            _logger.Warning($"Not adding duplicate preset {preset.Id}.");
+            return;
+        }
+
         var items = _cloner.Clone(preset.Items)!;
 
         var id = items[0].Id;
@@ -179,6 +182,8 @@ public class Mod(
             Template = config.Currency
         };
         assort.BarterScheme.Add(id, [[barter]]);
+
+        buildIdCache.Add(preset.Id);
     }
 
     public static int? GetPresetLoyaltyLevel(string? name)
@@ -215,6 +220,6 @@ public class AssortHydrator(Mod mod) : IOnLoad
 {
     public Task OnLoad()
     {
-        return Task.Run(() => mod.SetAssort(new()));
+        return Task.Run(mod.SetAssort);
     }
 }
