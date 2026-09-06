@@ -44,9 +44,6 @@
     <PackageReference Include="SPTarkov.Server.Core" Version="4.0.0" />
     <PackageReference Include="SPTarkov.DI" Version="4.0.0" />
     <PackageReference Include="SPTarkov.Reflection" Version="4.0.0" />
-    <Reference Include="SharedWeaponBuilds">
-      <HintPath>References\SharedWeaponBuilds.Server.dll</HintPath>
-    </Reference>
     <Reference Include="FikaServer">
       <HintPath>References\FikaServer.dll</HintPath>
     </Reference>
