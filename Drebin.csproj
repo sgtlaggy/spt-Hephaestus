@@ -47,6 +47,9 @@
     <Reference Include="SharedWeaponBuilds">
       <HintPath>References\SharedWeaponBuilds.Server.dll</HintPath>
     </Reference>
+    <Reference Include="FikaServer">
+      <HintPath>References\FikaServer.dll</HintPath>
+    </Reference>
   </ItemGroup>
 
 </Project>

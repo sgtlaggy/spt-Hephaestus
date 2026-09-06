@@ -17,11 +17,11 @@ using SPTarkov.Server.Core.Utils.Cloners;
 
 namespace Drebin;
 
-[Injectable(TypePriority = OnLoadOrder.TraderRegistration + 1, InjectionType = InjectionType.Singleton)]
+[Injectable(TypePriority = OnLoadOrder.TraderRegistration + 1)]
 public class Mod(
     ISptLogger<Mod> _logger,
     DataService _data,
-    SharedWeaponBuildsHelper _swbHelper,
+    FikaHelper _fikaHelper,
     DatabaseService _db,
     ConfigServer _cfg,
     ImageRouter _imageRouter,
@@ -90,7 +90,7 @@ public class Mod(
         return Task.CompletedTask;
     }
 
-    public async void SetAssort()
+    public async void SetAssort(MongoId sessionId)
     {
         var traders = _db.GetTraders();
 
@@ -98,7 +98,15 @@ public class Mod(
         var config = _data.GetConfig();
 
         var assort = NewAssort();
-        HashSet<MongoId> buildIdCache = [];
+
+        // file presets
+        foreach (var file in await _data.GetPresetFiles())
+        {
+            foreach (var preset in file.Builds)
+            {
+                AddPreset(assort, preset, GetPresetLoyaltyLevel(preset.Name) ?? file.LoyaltyLevel, config);
+            }
+        }
 
         // player presets
         foreach (var profile in _profileHelper.GetProfiles().Values)
@@ -110,42 +118,31 @@ public class Mod(
 
             foreach (var preset in profile.UserBuildData.WeaponBuilds)
             {
-                AddPreset(assort, preset, GetPresetLoyaltyLevel(preset.Name) ?? 1, config, buildIdCache);
+                AddPreset(assort, preset, GetPresetLoyaltyLevel(preset.Name) ?? 1, config);
             }
         }
 
-        // file presets
-        foreach (var file in await _data.GetPresetFiles())
+        // fika offline compatibility
+        var otherPlayerBuilds = _fikaHelper.GetOtherPlayerBuilds(sessionId);
+        foreach (var (profileId, builds) in otherPlayerBuilds)
         {
-            foreach (var preset in file.Builds)
+            // SaveServer.ProfileExists without another DI
+            if (_profileHelper.IsPlayer(profileId))
             {
-                AddPreset(assort, preset, GetPresetLoyaltyLevel(preset.Name) ?? file.LoyaltyLevel, config, buildIdCache);
+                continue;
             }
-        }
 
-        // Shared Weapon Builds compatibility
-        foreach (var build in _swbHelper.GetSharedBuilds())
-        {
-            AddPreset(assort, build, GetPresetLoyaltyLevel(build.Name) ?? 1, config, buildIdCache);
+            foreach (var build in builds)
+            {
+                AddPreset(assort, build, GetPresetLoyaltyLevel(build.Name) ?? 1, config);
+            }
         }
 
         traders[tbase.Id].Assort = assort;
     }
 
-    private void AddPreset(
-        TraderAssort assort,
-        WeaponBuild preset,
-        int loyaltyLevel,
-        Config config,
-        HashSet<MongoId> buildIdCache
-    )
+    private void AddPreset(TraderAssort assort, WeaponBuild preset, int loyaltyLevel, Config config)
     {
-        if (buildIdCache.Contains(preset.Id))
-        {
-            _logger.Warning($"Not adding duplicate preset {preset.Id}.");
-            return;
-        }
-
         var items = _cloner.Clone(preset.Items)!;
 
         var id = items[0].Id;
@@ -182,8 +179,6 @@ public class Mod(
             Template = config.Currency
         };
         assort.BarterScheme.Add(id, [[barter]]);
-
-        buildIdCache.Add(preset.Id);
     }
 
     public static int? GetPresetLoyaltyLevel(string? name)
@@ -220,6 +215,6 @@ public class AssortHydrator(Mod mod) : IOnLoad
 {
     public Task OnLoad()
     {
-        return Task.Run(mod.SetAssort);
+        return Task.Run(() => mod.SetAssort(new()));
     }
 }

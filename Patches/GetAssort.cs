@@ -19,13 +19,13 @@ public class GetAssortPatch : AbstractPatch
     }
 
     [PatchPrefix]
-    protected static void RebuildAssort(MongoId traderId)
+    protected static void RebuildAssort(MongoId sessionId, MongoId traderId)
     {
         var drebinId = data.GetBase().Id;
 
         if (traderId == drebinId)
         {
-            mod.SetAssort();
+            mod.SetAssort(sessionId);
         }
     }
 }
