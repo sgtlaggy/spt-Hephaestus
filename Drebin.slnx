@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="Drebin/Drebin.csproj" />
+  <Project Path="FikaCompat/Drebin-FikaCompat.csproj" />
+</Solution>

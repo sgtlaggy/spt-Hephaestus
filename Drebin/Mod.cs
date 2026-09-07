@@ -1,6 +1,6 @@
-﻿using Drebin.Compat;
-using SPTarkov.Common.Models.Logging;
+﻿using SPTarkov.Common.Models.Logging;
 using SPTarkov.DI.Annotations;
+using SPTarkov.Reflection.Patching;
 using SPTarkov.Server.Core.DI;
 using SPTarkov.Server.Core.Helpers.Profile;
 using SPTarkov.Server.Core.Helpers.Ragfair;
@@ -11,11 +11,14 @@ using SPTarkov.Server.Core.Models.Enums;
 using SPTarkov.Server.Core.Models.Spt.Config;
 using SPTarkov.Server.Core.Models.Spt.Tables;
 using SPTarkov.Server.Core.Routers;
+using SPTarkov.Server.Core.Services.Modding;
 using SPTarkov.Server.Core.Services.Ragfair;
 using SPTarkov.Server.Core.Utils.Cloners;
 
 
 namespace Drebin;
+
+public class BuildsByProfileDict : Dictionary<MongoId, List<WeaponBuild>>;
 
 [Injectable(TypePriority = OnLoadOrder.Preload + 1)]
 public class Mod(
@@ -23,17 +26,25 @@ public class Mod(
     TradersTable _traders,
     LocaleTable _locales,
     TraderConfig _traderConfig,
-    DataService _data,
-    ProfileDataPatch _profileDataPatch,
     ImageRouter _imageRouter,
     ProfileHelper _profileHelper,
-    RagfairPriceService _priceService,
     RagfairHelper _ragfairHelper,
-    ICloner _cloner
+    RagfairPriceService _priceService,
+    ProfileDataService _profileDataService,
+    ICloner _cloner,
+    DataService _data,
+    IEnumerable<IRuntimePatch> _patches
 ) : IOnLoad
 {
+    protected static string ProfileDataModKey = (new ModMetadata()).ModGuid;
+
     public async Task OnLoadAsync(CancellationToken cancellationToken)
     {
+        foreach (var patch in _patches)
+        {
+            patch.Enable();
+        }
+
         var tbase = _data.GetBase();
         var config = _data.GetConfig();
 
@@ -115,7 +126,7 @@ public class Mod(
         }
 
         // fika offline compatibility
-        var otherPlayerBuilds = await _profileDataPatch.GetOtherPlayerBuilds(sessionId);
+        var otherPlayerBuilds = await GetProfileDataBuilds(sessionId);
         foreach (var (profileId, builds) in otherPlayerBuilds)
         {
             // SaveServer.ProfileExists without another DI
@@ -171,6 +182,12 @@ public class Mod(
             Template = config.Currency
         };
         assort.BarterScheme.Add(id, [[barter]]);
+    }
+
+    public async Task<BuildsByProfileDict> GetProfileDataBuilds(MongoId sessionId)
+    {
+        var builds = await _profileDataService.GetProfileDataAsync<BuildsByProfileDict>(sessionId, ProfileDataModKey);
+        return builds ?? [];
     }
 
     public static int? GetPresetLoyaltyLevel(string? name)

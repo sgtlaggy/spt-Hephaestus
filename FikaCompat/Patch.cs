@@ -6,50 +6,32 @@ using SPTarkov.Reflection.Patching;
 using SPTarkov.Server.Core.Helpers.Profile;
 using SPTarkov.Server.Core.Models.Common;
 using SPTarkov.Server.Core.Models.Eft.Profile;
-using SPTarkov.Server.Core.Models.Spt.Mod;
 using SPTarkov.Server.Core.Services.Modding;
 using SPTarkov.Server.Core.Utils;
 
 
-namespace Drebin.Compat;
+namespace DrebinFikaCompat;
 
 public class BuildsByProfileDict : Dictionary<MongoId, List<WeaponBuild>>;
 
-[Injectable(InjectionType = InjectionType.Singleton)]
-public class ProfileDataPatch : AbstractPatch
+[Injectable]
+public class FikaProfileDataPatch : AbstractPatch
 {
-    public static string ProfileDataModKey = (new ModMetadata()).ModGuid;
-
+    protected static ProfileDataService _profileDataService = default!;
     protected static ProfileHelper _profileHelper = default!;
     protected static JsonUtil _json = default!;
-    protected static IReadOnlyList<SptMod> _mods = default!;
-    protected static ProfileDataService _profileDataService = default!;
 
-    public ProfileDataPatch(
+    private bool FikaInstalled = false;
+
+    public FikaProfileDataPatch(
+        ProfileDataService profileDataService,
         ProfileHelper profileHelper,
-        JsonUtil json,
-        IReadOnlyList<SptMod> mods,
-        ProfileDataService profileDataService
+        JsonUtil json
     )
     {
+        _profileDataService = profileDataService;
         _profileHelper = profileHelper;
         _json = json;
-        _mods = mods;
-        _profileDataService = profileDataService;
-    }
-
-    public async Task<BuildsByProfileDict> GetOtherPlayerBuilds(MongoId sessionId)
-    {
-        var builds = await _profileDataService.GetProfileDataAsync<BuildsByProfileDict>(sessionId, ProfileDataModKey);
-        return builds ?? [];
-    }
-
-    public new void Enable()
-    {
-        if (_mods.Any((mod) => (mod.ModMetadata.ModGuid == "Fika")))
-        {
-            base.Enable();
-        }
     }
 
     protected override MethodBase GetTargetMethod()
@@ -89,6 +71,6 @@ public class ProfileDataPatch : AbstractPatch
         }
 
         __result.ModData ??= [];
-        __result.ModData[ProfileDataModKey] = _json.Serialize(otherProfileBuilds)!;
+        __result.ModData[Constants.DrebinModGuid] = _json.Serialize(otherProfileBuilds)!;
     }
 }
