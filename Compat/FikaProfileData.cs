@@ -1,15 +1,13 @@
 using System.Reflection;
 using FikaServer.Controllers;
 using FikaServer.Models.Fika.Routes.Client;
-using Microsoft.Extensions.DependencyInjection;
 using SPTarkov.DI.Annotations;
 using SPTarkov.Reflection.Patching;
-using SPTarkov.Server.Core.DI;
-using SPTarkov.Server.Core.Helpers;
+using SPTarkov.Server.Core.Helpers.Profile;
 using SPTarkov.Server.Core.Models.Common;
 using SPTarkov.Server.Core.Models.Eft.Profile;
 using SPTarkov.Server.Core.Models.Spt.Mod;
-using SPTarkov.Server.Core.Services.Mod;
+using SPTarkov.Server.Core.Services.Modding;
 using SPTarkov.Server.Core.Utils;
 
 
@@ -18,33 +16,41 @@ namespace Drebin.Compat;
 public class BuildsByProfileDict : Dictionary<MongoId, List<WeaponBuild>>;
 
 [Injectable(InjectionType = InjectionType.Singleton)]
-public class FikaHelper(
-    IReadOnlyList<SptMod> _mods,
-    ProfileDataService _profileDataService
-) : IOnLoad
+public class ProfileDataPatch : AbstractPatch
 {
     public static string ProfileDataModKey = (new ModMetadata()).ModGuid;
 
-    public Task OnLoad()
+    protected static ProfileHelper _profileHelper = default!;
+    protected static JsonUtil _json = default!;
+    protected static IReadOnlyList<SptMod> _mods = default!;
+    protected static ProfileDataService _profileDataService = default!;
+
+    public ProfileDataPatch(
+        ProfileHelper profileHelper,
+        JsonUtil json,
+        IReadOnlyList<SptMod> mods,
+        ProfileDataService profileDataService
+    )
     {
-        if (_mods.Any((mod) => mod.ModMetadata.ModGuid == "Fika"))
+        _profileHelper = profileHelper;
+        _json = json;
+        _mods = mods;
+        _profileDataService = profileDataService;
+    }
+
+    public async Task<BuildsByProfileDict> GetOtherPlayerBuilds(MongoId sessionId)
+    {
+        var builds = await _profileDataService.GetProfileDataAsync<BuildsByProfileDict>(sessionId, ProfileDataModKey);
+        return builds ?? [];
+    }
+
+    public new void Enable()
+    {
+        if (_mods.Any((mod) => (mod.ModMetadata.ModGuid == "Fika")))
         {
-            new ProfileDownloadPatch().Enable();
+            base.Enable();
         }
-
-        return Task.CompletedTask;
     }
-
-    public BuildsByProfileDict GetOtherPlayerBuilds(MongoId sessionId)
-    {
-        return _profileDataService.GetProfileData<BuildsByProfileDict>(sessionId, ProfileDataModKey) ?? [];
-    }
-}
-
-public class ProfileDownloadPatch : AbstractPatch
-{
-    protected static ProfileHelper _profileHelper = ServiceLocator.ServiceProvider.GetService<ProfileHelper>()!;
-    protected static JsonUtil _json = ServiceLocator.ServiceProvider.GetService<JsonUtil>()!;
 
     protected override MethodBase GetTargetMethod()
     {
@@ -83,6 +89,6 @@ public class ProfileDownloadPatch : AbstractPatch
         }
 
         __result.ModData ??= [];
-        __result.ModData[FikaHelper.ProfileDataModKey] = _json.Serialize(otherProfileBuilds)!;
+        __result.ModData[ProfileDataModKey] = _json.Serialize(otherProfileBuilds)!;
     }
 }

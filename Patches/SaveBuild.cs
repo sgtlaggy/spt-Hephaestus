@@ -1,18 +1,22 @@
 using System.Reflection;
-using Microsoft.Extensions.DependencyInjection;
 using SPTarkov.Reflection.Patching;
 using SPTarkov.Server.Core.Controllers;
-using SPTarkov.Server.Core.DI;
 using SPTarkov.Server.Core.Models.Common;
 using SPTarkov.Server.Core.Models.Eft.PresetBuild;
-using SPTarkov.Server.Core.Services;
+using SPTarkov.Server.Core.Models.Enums;
+using SPTarkov.Server.Core.Services.Items;
 
 
 namespace Drebin.Patches;
 
 public class SaveBuildPatch : AbstractPatch
 {
-    protected static ItemBaseClassService _baseClassService = ServiceLocator.ServiceProvider.GetService<ItemBaseClassService>()!;
+    protected static ItemBaseClassService _baseClassService = default!;
+
+    public SaveBuildPatch(ItemBaseClassService baseClassService)
+    {
+        _baseClassService = baseClassService;
+    }
 
     protected override MethodBase GetTargetMethod()
     {

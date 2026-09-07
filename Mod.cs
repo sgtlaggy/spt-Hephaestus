@@ -1,29 +1,30 @@
 ﻿using Drebin.Compat;
-using Drebin.Patches;
+using SPTarkov.Common.Models.Logging;
 using SPTarkov.DI.Annotations;
 using SPTarkov.Server.Core.DI;
-using SPTarkov.Server.Core.Helpers;
+using SPTarkov.Server.Core.Helpers.Profile;
+using SPTarkov.Server.Core.Helpers.Ragfair;
 using SPTarkov.Server.Core.Models.Common;
 using SPTarkov.Server.Core.Models.Eft.Common.Tables;
 using SPTarkov.Server.Core.Models.Eft.Profile;
 using SPTarkov.Server.Core.Models.Enums;
 using SPTarkov.Server.Core.Models.Spt.Config;
-using SPTarkov.Server.Core.Models.Utils;
+using SPTarkov.Server.Core.Models.Spt.Tables;
 using SPTarkov.Server.Core.Routers;
-using SPTarkov.Server.Core.Servers;
-using SPTarkov.Server.Core.Services;
+using SPTarkov.Server.Core.Services.Ragfair;
 using SPTarkov.Server.Core.Utils.Cloners;
 
 
 namespace Drebin;
 
-[Injectable(TypePriority = OnLoadOrder.TraderRegistration + 1)]
+[Injectable(TypePriority = OnLoadOrder.Preload + 1)]
 public class Mod(
     ISptLogger<Mod> _logger,
+    TradersTable _traders,
+    LocaleTable _locales,
+    TraderConfig _traderConfig,
     DataService _data,
-    FikaHelper _fikaHelper,
-    DatabaseService _db,
-    ConfigServer _cfg,
+    ProfileDataPatch _profileDataPatch,
     ImageRouter _imageRouter,
     ProfileHelper _profileHelper,
     RagfairPriceService _priceService,
@@ -31,7 +32,7 @@ public class Mod(
     ICloner _cloner
 ) : IOnLoad
 {
-    public Task OnLoad()
+    public async Task OnLoadAsync(CancellationToken cancellationToken)
     {
         var tbase = _data.GetBase();
         var config = _data.GetConfig();
@@ -41,8 +42,7 @@ public class Mod(
             tbase.Currency = currency;
         }
 
-        var traders = _db.GetTraders();
-        traders.Add(
+        _traders.Add(
             tbase.Id,
             new()
             {
@@ -57,10 +57,10 @@ public class Mod(
                 Dialogue = []
             });
 
-        var locales = _db.GetLocales().Global.Values;
+        var locales = _locales.Global.Values;
         foreach (var locale in locales)
         {
-            locale.AddTransformer((Dictionary<string, string>? loc) =>
+            locale.AddTransformer((GlobalLocaleDictionary? loc) =>
             {
                 loc!.Add($"{tbase.Id} FullName", tbase.Name);
                 loc.Add($"{tbase.Id} FirstName", tbase.Name);
@@ -71,8 +71,7 @@ public class Mod(
             });
         }
 
-        var traderConfig = _cfg.GetConfig<TraderConfig>();
-        traderConfig.UpdateTime.Add(new()
+        _traderConfig.UpdateTime.Add(new()
         {
             Name = tbase.Id,
             TraderId = tbase.Id,
@@ -83,17 +82,10 @@ public class Mod(
             tbase.Avatar!.Replace(".jpg", ""),
             _data.GetImagePath()
         );
-
-        new GetAssortPatch().Enable();
-        new SaveBuildPatch().Enable();
-
-        return Task.CompletedTask;
     }
 
     public async void SetAssort(MongoId sessionId)
     {
-        var traders = _db.GetTraders();
-
         var tbase = _data.GetBase();
         var config = _data.GetConfig();
 
@@ -123,7 +115,7 @@ public class Mod(
         }
 
         // fika offline compatibility
-        var otherPlayerBuilds = _fikaHelper.GetOtherPlayerBuilds(sessionId);
+        var otherPlayerBuilds = await _profileDataPatch.GetOtherPlayerBuilds(sessionId);
         foreach (var (profileId, builds) in otherPlayerBuilds)
         {
             // SaveServer.ProfileExists without another DI
@@ -138,7 +130,7 @@ public class Mod(
             }
         }
 
-        traders[tbase.Id].Assort = assort;
+        _traders[tbase.Id].Assort = assort;
     }
 
     private void AddPreset(TraderAssort assort, WeaponBuild preset, int loyaltyLevel, Config config)
@@ -210,11 +202,11 @@ public class Mod(
     }
 }
 
-[Injectable(TypePriority = OnLoadOrder.PostSptModLoader + 1)]
+[Injectable(TypePriority = OnLoadOrder.PostLoad + 1)]
 public class AssortHydrator(Mod mod) : IOnLoad
 {
-    public Task OnLoad()
+    public async Task OnLoadAsync(CancellationToken cancellationToken)
     {
-        return Task.Run(() => mod.SetAssort(new()));
+        mod.SetAssort(new());
     }
 }
